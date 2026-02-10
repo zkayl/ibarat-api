@@ -20,12 +20,13 @@ def chat():
             return jsonify({"reply": "Error: API Key Gemini belum dipasang di Environment Variables Koyeb!"}), 500
 
         genai.configure(api_key=GENAI_API_KEY)
+        
         model = genai.GenerativeModel('gemini-1.5-flash')
 
         data = request.json
         user_message = data.get('message')
         
-        system_instruction = "Kamu adalah asisten AI toko Ibarat Fragrance. Jawablah dengan ramah dan singkat."
+        system_instruction = "Kamu adalah asisten AI toko Ibarat Fragrance. Jawablah dengan ramah, singkat, dan gunakan bahasa Indonesia yang elegan."
         full_prompt = f"{system_instruction}\n\nUser: {user_message}\nAI:"
         
         response = model.generate_content(full_prompt)
@@ -37,9 +38,8 @@ def chat():
     
     except Exception as e:
         error_details = traceback.format_exc()
-        print(error_details)
+        print(error_details) 
         return jsonify({"reply": f"Terjadi Error di Backend: {str(e)}"}), 500
 
 if __name__ == '__main__':
     app.run(debug=True, port=8000)
-
