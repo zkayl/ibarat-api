@@ -39,9 +39,7 @@ def chat():
         user_message = data["message"]
 
         # ✅ MODEL RESMI & AMAN
-        model = genai.GenerativeModel(
-            model_name="models/gemini-1.5-flash-latest"
-        )
+        model = genai.GenerativeModel("gemini-pro")
 
         prompt = f"""
 Role: Kamu adalah asisten AI toko "Ibarat Fragrance".
@@ -75,3 +73,4 @@ AI:
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=8000)
+
