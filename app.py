@@ -20,7 +20,7 @@ def chat():
             return jsonify({"reply": "Error: API Key Gemini belum dipasang di Environment Variables Koyeb!"}), 500
 
         genai.configure(api_key=GENAI_API_KEY)
-        model = genai.GenerativeModel('gemini-pro')
+        model = genai.GenerativeModel('gemini-1.5-flash')
 
         data = request.json
         user_message = data.get('message')
@@ -42,3 +42,4 @@ def chat():
 
 if __name__ == '__main__':
     app.run(debug=True, port=8000)
+
