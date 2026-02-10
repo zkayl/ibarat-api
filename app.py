@@ -34,7 +34,8 @@ def chat():
         return jsonify({"reply": response.text})
     
     except Exception as e:
-        return jsonify({"reply": "Maaf, AI sedang istirahat. Silakan coba lagi nanti."}), 500
+        return jsonify({"reply": f"Error Backend: {str(e)}"}), 500
 
 if __name__ == '__main__':
+
     app.run(debug=True, port=8000)
