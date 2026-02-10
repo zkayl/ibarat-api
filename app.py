@@ -1,50 +1,62 @@
-from flask import Flask, request, jsonify
-from flask_cors import CORS
-from google import genai
 import os
 import traceback
+from flask import Flask, request, jsonify
+from flask_cors import CORS
+import google.generativeai as genai
 
 app = Flask(__name__)
 CORS(app)
 
-GENAI_API_KEY = os.environ.get("GEMINI_API_KEY")
+API_KEY = os.environ.get("GEMINI_API_KEY")
 
-client = genai.Client(
-    api_key=GENAI_API_KEY,
-    http_options={'api_version': 'v1'}
-)
+if API_KEY:
+    genai.configure(api_key=API_KEY)
+else:
+    print("WARNING: GEMINI_API_KEY tidak ditemukan di Environment Variables!")
 
 @app.route('/', methods=['GET'])
-def home():
-    return "Server AI Ibarat Fragrance Berjalan (V1 Stable)!"
+def health_check():
+    return jsonify({"status": "online", "message": "Server Ibarat AI Siap!"}), 200
 
 @app.route('/chat', methods=['POST'])
 def chat():
     try:
-        if not GENAI_API_KEY:
-            return jsonify({"reply": "Error: API Key Gemini belum dipasang di Koyeb!"}), 500
+        if not API_KEY:
+            return jsonify({"reply": "Konfigurasi Server Salah: API Key tidak ditemukan."}), 500
 
         data = request.json
+        if not data or 'message' not in data:
+            return jsonify({"reply": "Pesan tidak boleh kosong."}), 400
+        
         user_message = data.get('message')
-        
-        system_instruction = "Kamu adalah asisten AI toko Ibarat Fragrance. Jawablah dengan ramah, singkat, dan elegan."
-        
-        response = client.models.generate_content(
-            model="gemini-1.5-flash",
-            contents=f"{system_instruction}\n\nUser: {user_message}"
-        )
-        
-        if not response.text:
-            return jsonify({"reply": "Maaf, AI tidak memberikan respon."})
 
-        return jsonify({"reply": response.text})
-    
+        model = genai.GenerativeModel('gemini-1.5-flash')
+
+        prompt = f"""
+        Role: Kamu adalah asisten AI toko 'Ibarat Fragrance'.
+        Tugas: Membantu pelanggan memilih parfum, menjelaskan aroma, dan ramah.
+        Aturan: Jawab singkat, elegan, gunakan Bahasa Indonesia.
+        
+        User: {user_message}
+        AI:"""
+
+        response = model.generate_content(prompt)
+
+        if response and response.text:
+            return jsonify({"reply": response.text})
+        else:
+            return jsonify({"reply": "AI tidak memberikan respon. Coba ulangi pertanyaan Anda."})
+
     except Exception as e:
-        error_details = traceback.format_exc()
-        print(error_details) 
-        if "404" in str(e):
-            return jsonify({"reply": "Error 404: Model tidak ditemukan. Pastikan API Key Anda sudah benar dan memiliki akses ke Gemini 1.5 Flash."}), 500
-        return jsonify({"reply": f"Terjadi Error di Backend: {str(e)}"}), 500
+        print("--- ERROR START ---")
+        print(traceback.format_exc())
+        print("--- ERROR END ---")
+        
+        error_msg = str(e)
+        if "API_KEY_INVALID" in error_msg:
+            return jsonify({"reply": "Gagal: API Key yang kamu masukkan di Koyeb salah."}), 500
+        
+        return jsonify({"reply": f"Terjadi kendala teknis. Coba sesaat lagi."}), 500
 
 if __name__ == '__main__':
-    app.run(debug=True, port=8000)
+    app.run(host='0.0.0.0', port=8000)
