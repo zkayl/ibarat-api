@@ -5,7 +5,6 @@ from flask_cors import CORS
 import google.generativeai as genai
 
 app = Flask(__name__)
-# Memperbolehkan semua origin agar tidak masalah saat diakses dari Netlify
 CORS(app)
 
 # Ambil API Key dari Environment Variable Koyeb
@@ -18,53 +17,61 @@ else:
 
 @app.route('/', methods=['GET'])
 def health_check():
-    return jsonify({"status": "online", "message": "Server Ibarat AI Siap!"}), 200
+    return jsonify({
+        "status": "online",
+        "message": "Server Ibarat AI Siap!"
+    }), 200
 
 @app.route('/chat', methods=['POST'])
 def chat():
     try:
         if not API_KEY:
-            return jsonify({"reply": "Konfigurasi Server Salah: API Key tidak ditemukan di Koyeb."}), 500
+            return jsonify({
+                "reply": "Konfigurasi server salah: API Key tidak ditemukan."
+            }), 500
 
-        # Ambil data dari request
-        data = request.json
-        if not data or 'message' not in data:
-            return jsonify({"reply": "Pesan tidak boleh kosong."}), 400
-        
-        user_message = data.get('message')
+        data = request.get_json(silent=True)
+        if not data or not data.get("message"):
+            return jsonify({
+                "reply": "Pesan tidak boleh kosong."
+            }), 400
 
-        # Inisialisasi Model (Gunakan 1.5-flash yang paling stabil di library ini)
-        model = genai.GenerativeModel('gemini-1.5-flash')
+        user_message = data["message"]
 
-        # Instruksi sistem
+        # ✅ MODEL RESMI & AMAN
+        model = genai.GenerativeModel(
+            model_name="models/gemini-1.5-flash-latest"
+        )
+
         prompt = f"""
-        Role: Kamu adalah asisten AI toko 'Ibarat Fragrance'.
-        Tugas: Membantu pelanggan memilih parfum, menjelaskan aroma, dan ramah.
-        Aturan: Jawab singkat, elegan, gunakan Bahasa Indonesia.
-        
-        User: {user_message}
-        AI:"""
+Role: Kamu adalah asisten AI toko "Ibarat Fragrance".
+Tugas: Membantu pelanggan memilih parfum, menjelaskan aroma, dan ramah.
+Aturan:
+- Jawaban singkat & elegan
+- Bahasa Indonesia
+- Nada profesional tapi hangat
 
-        # Panggil AI
+User: {user_message}
+AI:
+"""
+
         response = model.generate_content(prompt)
 
-        if response and response.text:
-            return jsonify({"reply": response.text})
-        else:
-            return jsonify({"reply": "AI sedang tidak memberikan respon. Coba ulangi pertanyaan Anda."})
+        if response and hasattr(response, "text") and response.text:
+            return jsonify({"reply": response.text.strip()})
 
-    except Exception as e:
-        # Cetak error lengkap di Log Koyeb
-        print("--- DEBUG ERROR ---")
+        return jsonify({
+            "reply": "AI belum bisa memberikan jawaban. Silakan coba lagi."
+        }), 500
+
+    except Exception:
+        print("=== ERROR TRACEBACK ===")
         print(traceback.format_exc())
-        
-        error_msg = str(e)
-        # Handle error 404 spesifik jika library gagal mapping model
-        if "404" in error_msg:
-            return jsonify({"reply": "Gagal: Model AI tidak ditemukan di region server ini. Cek API Key Anda."}), 500
-        
-        return jsonify({"reply": f"Terjadi kendala teknis di server. Silakan coba lagi."}), 500
 
-if __name__ == '__main__':
-    # Koyeb akan otomatis menggunakan gunicorn, port ini hanya untuk lokal
-    app.run(host='0.0.0.0', port=8000)
+        return jsonify({
+            "reply": "Terjadi kendala teknis di server. Silakan coba lagi."
+        }), 500
+
+
+if __name__ == "__main__":
+    app.run(host="0.0.0.0", port=8000)
